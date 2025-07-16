@@ -14,6 +14,7 @@
 
 import {GitProvider, GitProviderCreateOptions} from './git-provider';
 import {GitHubProvider, GitHubProviderCreateOptions} from './github-provider';
+import {GitLabProvider, GitLabProviderCreateOptions} from './gitlab-provider';
 import {ConfigurationError} from '../errors';
 
 export type SupportedProvider = 'github' | 'gitlab' | 'bitbucket';
@@ -28,8 +29,9 @@ export interface ProviderFactoryOptions extends GitProviderCreateOptions {
     port: number;
   };
   fetch?: Function;
-  // Future: GitLab-specific options
-  // gitlabUrl?: string;
+  // GitLab-specific options
+  gitlabUrl?: string;
+  privateToken?: string;
   // Future: Bitbucket-specific options
   // bitbucketUrl?: string;
 }
@@ -49,11 +51,7 @@ export class ProviderFactory {
       case 'github':
         return this.createGitHubProvider(options);
       case 'gitlab':
-        throw new ConfigurationError(
-          'GitLab provider is not yet implemented. Please use GitHub provider or contribute a GitLab implementation.',
-          'GitProvider',
-          `${options.owner}/${options.repo}`
-        );
+        return this.createGitLabProvider(options);
       case 'bitbucket':
         throw new ConfigurationError(
           'Bitbucket provider is not yet implemented. Please use GitHub provider or contribute a Bitbucket implementation.',
@@ -88,6 +86,25 @@ export class ProviderFactory {
     };
 
     return GitHubProvider.create(githubOptions);
+  }
+
+  /**
+   * Create a GitLab provider instance.
+   */
+  private static async createGitLabProvider(
+    options: ProviderFactoryOptions
+  ): Promise<GitLabProvider> {
+    const gitlabOptions: GitLabProviderCreateOptions = {
+      owner: options.owner,
+      repo: options.repo,
+      token: options.token,
+      defaultBranch: options.defaultBranch,
+      gitlabUrl: options.gitlabUrl,
+      privateToken: options.privateToken,
+      logger: options.logger,
+    };
+
+    return GitLabProvider.create(gitlabOptions);
   }
 
   /**

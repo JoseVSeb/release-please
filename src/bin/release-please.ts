@@ -50,6 +50,7 @@ interface GitHubArgs {
   token?: string;
   apiUrl?: string;
   graphqlUrl?: string;
+  gitlabUrl?: string;
   fork?: boolean;
 
   // deprecated in favor of targetBranch
@@ -165,16 +166,21 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
       default: 'github',
       choices: ['github', 'gitlab', 'bitbucket'],
     })
-    .option('token', {describe: 'GitHub token with repo write permissions'})
+    .option('token', {describe: 'Access token with repo write permissions (GitHub token or GitLab private token)'})
     .option('api-url', {
-      describe: 'URL to use when making API requests',
+      describe: 'URL to use when making API requests (GitHub API URL)',
       default: GH_API_URL,
       type: 'string',
     })
     .option('graphql-url', {
-      describe: 'URL to use when making GraphQL requests',
+      describe: 'URL to use when making GraphQL requests (GitHub GraphQL URL)',
       default: GH_GRAPHQL_URL,
       type: 'string',
+    })
+    .option('gitlab-url', {
+      describe: 'GitLab instance URL (for GitLab provider)',
+      type: 'string',
+      default: 'https://gitlab.com',
     })
     .option('default-branch', {
       describe: 'The branch to open release PRs against and tag releases on',
@@ -186,7 +192,7 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
       type: 'string',
     })
     .option('repo-url', {
-      describe: 'GitHub URL to generate release for',
+      describe: 'Repository URL to generate release for (supports GitHub and GitLab URLs)',
       demand: true,
     })
     .option('dry-run', {
@@ -876,6 +882,7 @@ async function buildGitProvider(argv: GitHubArgs) {
     token: argv.token!,
     apiUrl: argv.apiUrl,
     graphqlUrl: argv.graphqlUrl,
+    gitlabUrl: argv.gitlabUrl,
   });
   return provider;
 }
