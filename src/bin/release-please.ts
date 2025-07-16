@@ -30,6 +30,7 @@ import {
 } from '../factory';
 import {Bootstrapper} from '../bootstrapper';
 import {createPatch} from 'diff';
+import {ProviderFactory, SupportedProvider} from '../providers';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const parseGithubRepoUrl = require('parse-github-repo-url');
@@ -42,12 +43,17 @@ interface ErrorObject {
 }
 
 interface GitHubArgs {
+  provider?: string;
   dryRun?: boolean;
   trace?: boolean;
   repoUrl?: string;
   token?: string;
   apiUrl?: string;
   graphqlUrl?: string;
+  gitlabUrl?: string;
+  bitbucketUrl?: string;
+  username?: string;
+  appPassword?: string;
   fork?: boolean;
 
   // deprecated in favor of targetBranch
@@ -157,15 +163,39 @@ interface DebugConfigArgs extends GitHubArgs, ManifestArgs {}
 
 function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
   return yargs
-    .option('token', {describe: 'GitHub token with repo write permissions'})
+    .option('provider', {
+      describe: 'Git provider to use (github, gitlab, bitbucket)',
+      type: 'string',
+      default: 'github',
+      choices: ['github', 'gitlab', 'bitbucket'],
+    })
+    .option('token', {describe: 'Access token with repo write permissions (GitHub token, GitLab private token, or Bitbucket token)'})
     .option('api-url', {
-      describe: 'URL to use when making API requests',
+      describe: 'URL to use when making API requests (GitHub API URL)',
       default: GH_API_URL,
       type: 'string',
     })
     .option('graphql-url', {
-      describe: 'URL to use when making GraphQL requests',
+      describe: 'URL to use when making GraphQL requests (GitHub GraphQL URL)',
       default: GH_GRAPHQL_URL,
+      type: 'string',
+    })
+    .option('gitlab-url', {
+      describe: 'GitLab instance URL (for GitLab provider)',
+      type: 'string',
+      default: 'https://gitlab.com',
+    })
+    .option('bitbucket-url', {
+      describe: 'Bitbucket API URL (for Bitbucket provider)',
+      type: 'string',
+      default: 'https://api.bitbucket.org/2.0',
+    })
+    .option('username', {
+      describe: 'Bitbucket username (for Bitbucket app password authentication)',
+      type: 'string',
+    })
+    .option('app-password', {
+      describe: 'Bitbucket app password (for Bitbucket authentication)',
       type: 'string',
     })
     .option('default-branch', {
@@ -178,7 +208,7 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
       type: 'string',
     })
     .option('repo-url', {
-      describe: 'GitHub URL to generate release for',
+      describe: 'Repository URL to generate release for (supports GitHub and GitLab URLs)',
       demand: true,
     })
     .option('dry-run', {
@@ -809,6 +839,47 @@ const debugConfigCommand: yargs.CommandModule<{}, DebugConfigArgs> = {
   },
 };
 
+const providerInfoCommand: yargs.CommandModule<{}, GitHubArgs> = {
+  command: 'provider-info',
+  describe: 'Show information about the selected git provider (demonstrates pluggable architecture)',
+  builder(yargs) {
+    return gitHubOptions(yargs);
+  },
+  async handler(argv) {
+    try {
+      const provider = await buildGitProvider(argv);
+      console.log('Git Provider Information:');
+      console.log('========================');
+      console.log(`Provider type: ${argv.provider || 'github'} (default)`);
+      console.log(`Repository: ${provider.repository.owner}/${provider.repository.repo}`);
+      console.log(`Default branch: ${provider.repository.defaultBranch}`);
+      
+      // Show that backward compatibility works by accessing GitHub instance
+      if (argv.provider === 'github' || !argv.provider) {
+        const githubProvider = provider as any;
+        if (githubProvider.getGitHub) {
+          const github = githubProvider.getGitHub();
+          console.log(`GitHub compatibility: Available (${github.constructor.name})`);
+          console.log(`  - Can access all GitHub methods for backward compatibility`);
+          console.log(`  - Existing code like Manifest, Bootstrapper can use github instance directly`);
+          console.log(`  - Migration path: provider.getGitHub() or gradual interface migration`);
+        }
+      }
+      
+      console.log('\nSupported providers:', ProviderFactory.getSupportedProviders().join(', '));
+      console.log('\nThis demonstrates the pluggable git provider architecture.');
+      console.log('You can use --provider github|gitlab|bitbucket (gitlab has skeleton implementation, bitbucket has foundational implementation)');
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error('Error:', err.message);
+      } else {
+        console.error('Unknown error:', err);
+      }
+      process.exitCode = 1;
+    }
+  },
+};
+
 async function buildGitHub(argv: GitHubArgs): Promise<GitHub> {
   const [owner, repo] = parseGithubRepoUrl(argv.repoUrl);
   const github = await GitHub.create({
@@ -821,6 +892,23 @@ async function buildGitHub(argv: GitHubArgs): Promise<GitHub> {
   return github;
 }
 
+async function buildGitProvider(argv: GitHubArgs) {
+  const [owner, repo] = parseGithubRepoUrl(argv.repoUrl);
+  const provider = await ProviderFactory.create({
+    provider: (argv.provider as SupportedProvider) || 'github',
+    owner,
+    repo,
+    token: argv.token!,
+    apiUrl: argv.apiUrl,
+    graphqlUrl: argv.graphqlUrl,
+    gitlabUrl: argv.gitlabUrl,
+    bitbucketUrl: argv.bitbucketUrl,
+    username: argv.username,
+    appPassword: argv.appPassword,
+  });
+  return provider;
+}
+
 export const parser = yargs
   .command(createReleasePullRequestCommand)
   .command(createReleaseCommand)
@@ -828,6 +916,7 @@ export const parser = yargs
   .command(createManifestReleaseCommand)
   .command(bootstrapCommand)
   .command(debugConfigCommand)
+  .command(providerInfoCommand)
   .option('debug', {
     describe: 'print verbose errors (use only for local debugging).',
     default: false,
