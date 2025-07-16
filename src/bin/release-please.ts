@@ -844,6 +844,9 @@ const providerInfoCommand: yargs.CommandModule<{}, GitHubArgs> = {
         if (githubProvider.getGitHub) {
           const github = githubProvider.getGitHub();
           console.log(`GitHub compatibility: Available (${github.constructor.name})`);
+          console.log(`  - Can access all GitHub methods for backward compatibility`);
+          console.log(`  - Existing code like Manifest, Bootstrapper can use github instance directly`);
+          console.log(`  - Migration path: provider.getGitHub() or gradual interface migration`);
         }
       }
       

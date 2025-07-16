@@ -11,6 +11,16 @@ The architecture consists of:
 - **ProviderFactory**: Creates provider instances based on configuration
 - **Backward Compatibility**: Existing GitHub-based code continues to work unchanged
 
+## Quick Start
+
+```bash
+# Test the new provider architecture
+release-please provider-info --repo-url https://github.com/owner/repo --provider github --token $GITHUB_TOKEN
+
+# Use with GitLab (skeleton implementation)
+release-please provider-info --repo-url https://gitlab.com/owner/repo --provider gitlab --token $GITLAB_TOKEN
+```
+
 ## Supported Providers
 
 ### GitHub (Default)
@@ -30,7 +40,45 @@ The architecture consists of:
 - **Implementation**: Planned
 - **TODO**: Create `BitbucketProvider` implementation
 
-## Usage
+## Implementation Status
+
+This implementation provides:
+
+✅ **Pluggable Architecture**: Clean separation of provider-specific logic  
+✅ **Backward Compatibility**: All existing functionality preserved  
+✅ **GitHub Provider**: Full implementation wrapping existing GitHub class  
+✅ **GitLab Provider**: Skeleton implementation with proper validation  
+✅ **Provider Factory**: Centralized creation with type safety  
+✅ **CLI Integration**: Provider selection via `--provider` flag  
+✅ **Comprehensive Tests**: Unit and integration tests  
+✅ **Documentation**: Complete architecture documentation  
+
+## Architecture Benefits
+
+1. **Minimal Changes**: Existing codebase unchanged, new architecture layered on top
+2. **Gradual Migration**: Code can be migrated to use providers incrementally
+3. **Type Safety**: Full TypeScript support with proper interfaces
+4. **Extensibility**: Easy to add new providers (GitLab, Bitbucket, Azure DevOps, etc.)
+5. **Testability**: Provider interfaces are easily mockable for testing
+
+## Migration Path
+
+The architecture supports gradual migration:
+
+```typescript
+// Phase 1: Use provider factory but access GitHub instance (current)
+const provider = await ProviderFactory.create({provider: 'github', ...});
+const github = (provider as GitHubProvider).getGitHub();
+const manifest = new Manifest(github, ...); // Existing code unchanged
+
+// Phase 2: Update components to accept GitProvider interface
+const manifest = new Manifest(provider, ...); // Future enhancement
+
+// Phase 3: Remove GitHub-specific dependencies
+// All code uses GitProvider interface, supports all providers
+```
+
+## Usage Examples
 
 ### CLI Usage
 
@@ -46,112 +94,45 @@ release-please release-pr --repo-url https://gitlab.com/owner/repo --provider gi
 
 # GitLab (self-hosted)
 release-please release-pr --repo-url https://gitlab.example.com/owner/repo --provider gitlab --token $GITLAB_TOKEN --gitlab-url https://gitlab.example.com
-```
 
-### Provider Information
-
-```bash
-# Show provider information and test configuration
+# Provider information
 release-please provider-info --repo-url https://github.com/owner/repo --provider github --token $TOKEN
 ```
 
-## Architecture Details
-
-### GitProvider Interface
-
-The `GitProvider` interface defines the core methods that all providers must implement:
+### Programmatic Usage
 
 ```typescript
-interface GitProvider {
-  readonly repository: Repository;
-  
-  // Core methods for release-please functionality
-  commitsSince(targetBranch: string, filter: CommitFilter, options?: CommitIteratorOptions): Promise<Commit[]>;
-  mergeCommitIterator(targetBranch: string, options?: CommitIteratorOptions): AsyncIterable<Commit>;
-  createOrUpdateReleasePullRequest(releasePullRequest: ReleasePullRequest, targetBranch: string, options?: any): Promise<PullRequest>;
-  getFileContents(filename: string): Promise<GitHubFileContents>;
-  getFileContentsOnBranch(filename: string, branch: string): Promise<GitHubFileContents>;
-  createRelease(release: Release, options?: ReleaseOptions): Promise<GitProviderRelease>;
-  addIssueLabels(labels: string[], issue: number): Promise<void>;
-  removeIssueLabels(labels: string[], issue: number): Promise<void>;
-}
-```
+import {ProviderFactory} from 'release-please/src/providers';
 
-### ProviderFactory
-
-The `ProviderFactory` creates provider instances based on the provider type:
-
-```typescript
+// Create any provider
 const provider = await ProviderFactory.create({
   provider: 'github', // or 'gitlab', 'bitbucket'
   owner: 'owner',
   repo: 'repo',
   token: 'access-token',
-  // Provider-specific options...
 });
-```
 
-### Backward Compatibility
+// Use provider interface methods
+const commits = await provider.commitsSince('main', filter);
+const release = await provider.createRelease(releaseInfo);
 
-The `GitHubProvider` wraps the existing `GitHub` class and provides a `getGitHub()` method for backward compatibility:
-
-```typescript
-const provider = await ProviderFactory.create({...});
+// Backward compatibility (GitHub only)
 if (provider instanceof GitHubProvider) {
-  const github = provider.getGitHub(); // Access original GitHub instance
+  const github = provider.getGitHub();
+  // Use existing GitHub methods
 }
 ```
 
-## Adding New Providers
+## Next Steps
 
-To add a new provider (e.g., Bitbucket):
+To complete the pluggable provider implementation:
 
-1. **Create the provider class** implementing `GitProvider`:
-   ```typescript
-   // src/providers/bitbucket-provider.ts
-   export class BitbucketProvider implements GitProvider {
-     // Implement all GitProvider methods
-   }
-   ```
-
-2. **Add to the factory**:
-   ```typescript
-   // src/providers/factory.ts
-   case 'bitbucket':
-     return this.createBitbucketProvider(options);
-   ```
-
-3. **Add provider-specific options** to CLI and interfaces
-
-4. **Add tests** in `test/providers/`
-
-5. **Update documentation**
-
-## Migration Path
-
-The architecture is designed for gradual migration:
-
-1. **Phase 1** (Current): Provider infrastructure with GitHub wrapper
-2. **Phase 2**: Migrate core components to use GitProvider interface
-3. **Phase 3**: Implement additional providers (GitLab, Bitbucket)
-4. **Phase 4**: Deprecate direct GitHub class usage in favor of providers
-
-## Testing
-
-```bash
-# Run provider tests
-npm test -- build/test/providers/
-
-# Test provider info command
-release-please provider-info --repo-url https://github.com/test/test --provider github --token dummy
-```
+1. **Implement GitLab API**: Replace skeleton implementation with actual GitLab API calls
+2. **Add Bitbucket Provider**: Implement BitbucketProvider class
+3. **Update Core Components**: Migrate Manifest, strategies to use GitProvider interface
+4. **Enhanced CLI**: Provider-specific help and validation
+5. **Authentication**: Provider-specific authentication methods
 
 ## Contributing
 
-When contributing to the provider architecture:
-
-1. Follow the existing pattern of other providers
-2. Implement the full `GitProvider` interface
-3. Add appropriate error handling and validation
-4. Include tests for your provider
-5. Update documentation
+See the main documentation for adding new providers. The architecture is designed to make adding new providers straightforward while maintaining backward compatibility.
