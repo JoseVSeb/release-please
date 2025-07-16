@@ -17,6 +17,7 @@ import {expect} from 'chai';
 import {ProviderFactory} from '../../src/providers';
 import {GitHubProvider} from '../../src/providers/github-provider';
 import {GitLabProvider} from '../../src/providers/gitlab-provider';
+import {BitbucketProvider} from '../../src/providers/bitbucket-provider';
 import {ConfigurationError} from '../../src/errors';
 
 describe('ProviderFactory', () => {
@@ -58,18 +59,57 @@ describe('ProviderFactory', () => {
       }
     });
 
-    it('should throw for bitbucket (not implemented)', async () => {
+    it('should create BitbucketProvider for bitbucket provider', async () => {
+      const provider = await ProviderFactory.create({
+        provider: 'bitbucket',
+        owner: 'test',
+        repo: 'test',
+        token: 'token',
+      });
+      expect(provider).to.be.instanceOf(BitbucketProvider);
+      expect(provider.repository.owner).to.equal('test');
+      expect(provider.repository.repo).to.equal('test');
+    });
+
+    it('should create BitbucketProvider with app password authentication', async () => {
+      const provider = await ProviderFactory.create({
+        provider: 'bitbucket',
+        owner: 'test',
+        repo: 'test',
+        username: 'testuser',
+        appPassword: 'app-password',
+      });
+      expect(provider).to.be.instanceOf(BitbucketProvider);
+      expect(provider.repository.owner).to.equal('test');
+      expect(provider.repository.repo).to.equal('test');
+    });
+
+    it('should throw for bitbucket provider without authentication', async () => {
       try {
         await ProviderFactory.create({
           provider: 'bitbucket',
           owner: 'test',
           repo: 'test',
-          token: 'token',
         });
         expect.fail('Should have thrown');
       } catch (err) {
         expect(err).to.be.instanceOf(ConfigurationError);
-        expect((err as ConfigurationError).message).to.include('Bitbucket provider is not yet implemented');
+        expect((err as ConfigurationError).message).to.include('Bitbucket provider requires authentication');
+      }
+    });
+
+    it('should throw for bitbucket provider with app password but no username', async () => {
+      try {
+        await ProviderFactory.create({
+          provider: 'bitbucket',
+          owner: 'test',
+          repo: 'test',
+          appPassword: 'app-password',
+        });
+        expect.fail('Should have thrown');
+      } catch (err) {
+        expect(err).to.be.instanceOf(ConfigurationError);
+        expect((err as ConfigurationError).message).to.include('Bitbucket app password authentication requires username');
       }
     });
 

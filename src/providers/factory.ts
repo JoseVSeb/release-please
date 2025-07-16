@@ -15,6 +15,7 @@
 import {GitProvider, GitProviderCreateOptions} from './git-provider';
 import {GitHubProvider, GitHubProviderCreateOptions} from './github-provider';
 import {GitLabProvider, GitLabProviderCreateOptions} from './gitlab-provider';
+import {BitbucketProvider, BitbucketProviderCreateOptions} from './bitbucket-provider';
 import {ConfigurationError} from '../errors';
 
 export type SupportedProvider = 'github' | 'gitlab' | 'bitbucket';
@@ -32,8 +33,10 @@ export interface ProviderFactoryOptions extends GitProviderCreateOptions {
   // GitLab-specific options
   gitlabUrl?: string;
   privateToken?: string;
-  // Future: Bitbucket-specific options
-  // bitbucketUrl?: string;
+  // Bitbucket-specific options
+  bitbucketUrl?: string;
+  username?: string;
+  appPassword?: string;
 }
 
 /**
@@ -53,11 +56,7 @@ export class ProviderFactory {
       case 'gitlab':
         return this.createGitLabProvider(options);
       case 'bitbucket':
-        throw new ConfigurationError(
-          'Bitbucket provider is not yet implemented. Please use GitHub provider or contribute a Bitbucket implementation.',
-          'GitProvider',
-          `${options.owner}/${options.repo}`
-        );
+        return this.createBitbucketProvider(options);
       default:
         throw new ConfigurationError(
           `Unsupported provider: ${provider}. Supported providers are: github, gitlab, bitbucket`,
@@ -105,6 +104,26 @@ export class ProviderFactory {
     };
 
     return GitLabProvider.create(gitlabOptions);
+  }
+
+  /**
+   * Create a Bitbucket provider instance.
+   */
+  private static async createBitbucketProvider(
+    options: ProviderFactoryOptions
+  ): Promise<BitbucketProvider> {
+    const bitbucketOptions: BitbucketProviderCreateOptions = {
+      owner: options.owner,
+      repo: options.repo,
+      token: options.token,
+      defaultBranch: options.defaultBranch,
+      bitbucketUrl: options.bitbucketUrl,
+      username: options.username,
+      appPassword: options.appPassword,
+      logger: options.logger,
+    };
+
+    return BitbucketProvider.create(bitbucketOptions);
   }
 
   /**

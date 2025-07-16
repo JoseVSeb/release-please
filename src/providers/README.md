@@ -36,9 +36,11 @@ release-please provider-info --repo-url https://gitlab.com/owner/repo --provider
 - **TODO**: Implement actual GitLab API integration
 
 ### Bitbucket
-- **Status**: ❌ Not Implemented
-- **Implementation**: Planned
-- **TODO**: Create `BitbucketProvider` implementation
+- **Status**: 🏗️ Foundational Implementation
+- **Implementation**: `BitbucketProvider` (foundational structure with authentication)
+- **Configuration**: Requires `--token` (Bitbucket OAuth token) or `--username` and `--app-password`
+- **Optional**: `--bitbucket-url` for custom Bitbucket instances
+- **TODO**: Implement actual Bitbucket API integration
 
 ## Implementation Status
 
@@ -48,6 +50,7 @@ This implementation provides:
 ✅ **Backward Compatibility**: All existing functionality preserved  
 ✅ **GitHub Provider**: Full implementation wrapping existing GitHub class  
 ✅ **GitLab Provider**: Skeleton implementation with proper validation  
+✅ **Bitbucket Provider**: Foundational implementation with authentication framework  
 ✅ **Provider Factory**: Centralized creation with type safety  
 ✅ **CLI Integration**: Provider selection via `--provider` flag  
 ✅ **Comprehensive Tests**: Unit and integration tests  
@@ -92,8 +95,14 @@ release-please release-pr --repo-url https://github.com/owner/repo --provider gi
 # GitLab
 release-please release-pr --repo-url https://gitlab.com/owner/repo --provider gitlab --token $GITLAB_TOKEN
 
-# GitLab (self-hosted)
-release-please release-pr --repo-url https://gitlab.example.com/owner/repo --provider gitlab --token $GITLAB_TOKEN --gitlab-url https://gitlab.example.com
+# Bitbucket
+release-please release-pr --repo-url https://bitbucket.org/owner/repo --provider bitbucket --token $BITBUCKET_TOKEN
+
+# Bitbucket (with app password)
+release-please release-pr --repo-url https://bitbucket.org/owner/repo --provider bitbucket --username myuser --app-password $BITBUCKET_APP_PASSWORD
+
+# Bitbucket (self-hosted)
+release-please release-pr --repo-url https://bitbucket.example.com/owner/repo --provider bitbucket --token $BITBUCKET_TOKEN --bitbucket-url https://api.bitbucket.example.com/2.0
 
 # Provider information
 release-please provider-info --repo-url https://github.com/owner/repo --provider github --token $TOKEN
@@ -128,10 +137,11 @@ if (provider instanceof GitHubProvider) {
 To complete the pluggable provider implementation:
 
 1. **Implement GitLab API**: Replace skeleton implementation with actual GitLab API calls
-2. **Add Bitbucket Provider**: Implement BitbucketProvider class
-3. **Update Core Components**: Migrate Manifest, strategies to use GitProvider interface
-4. **Enhanced CLI**: Provider-specific help and validation
-5. **Authentication**: Provider-specific authentication methods
+2. **Complete Bitbucket API**: Implement actual Bitbucket API calls in the foundational BitbucketProvider
+3. **Add Azure DevOps Provider**: Implement Azure DevOps provider
+4. **Update Core Components**: Migrate Manifest, strategies to use GitProvider interface
+5. **Enhanced CLI**: Provider-specific help and validation
+6. **Authentication**: Provider-specific authentication methods
 
 ## Contributing
 

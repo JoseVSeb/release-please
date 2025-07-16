@@ -51,6 +51,9 @@ interface GitHubArgs {
   apiUrl?: string;
   graphqlUrl?: string;
   gitlabUrl?: string;
+  bitbucketUrl?: string;
+  username?: string;
+  appPassword?: string;
   fork?: boolean;
 
   // deprecated in favor of targetBranch
@@ -166,7 +169,7 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
       default: 'github',
       choices: ['github', 'gitlab', 'bitbucket'],
     })
-    .option('token', {describe: 'Access token with repo write permissions (GitHub token or GitLab private token)'})
+    .option('token', {describe: 'Access token with repo write permissions (GitHub token, GitLab private token, or Bitbucket token)'})
     .option('api-url', {
       describe: 'URL to use when making API requests (GitHub API URL)',
       default: GH_API_URL,
@@ -181,6 +184,19 @@ function gitHubOptions(yargs: yargs.Argv): yargs.Argv {
       describe: 'GitLab instance URL (for GitLab provider)',
       type: 'string',
       default: 'https://gitlab.com',
+    })
+    .option('bitbucket-url', {
+      describe: 'Bitbucket API URL (for Bitbucket provider)',
+      type: 'string',
+      default: 'https://api.bitbucket.org/2.0',
+    })
+    .option('username', {
+      describe: 'Bitbucket username (for Bitbucket app password authentication)',
+      type: 'string',
+    })
+    .option('app-password', {
+      describe: 'Bitbucket app password (for Bitbucket authentication)',
+      type: 'string',
     })
     .option('default-branch', {
       describe: 'The branch to open release PRs against and tag releases on',
@@ -852,7 +868,7 @@ const providerInfoCommand: yargs.CommandModule<{}, GitHubArgs> = {
       
       console.log('\nSupported providers:', ProviderFactory.getSupportedProviders().join(', '));
       console.log('\nThis demonstrates the pluggable git provider architecture.');
-      console.log('You can use --provider github|gitlab|bitbucket (gitlab and bitbucket are not yet implemented)');
+      console.log('You can use --provider github|gitlab|bitbucket (gitlab has skeleton implementation, bitbucket has foundational implementation)');
     } catch (err) {
       if (err instanceof Error) {
         console.error('Error:', err.message);
@@ -886,6 +902,9 @@ async function buildGitProvider(argv: GitHubArgs) {
     apiUrl: argv.apiUrl,
     graphqlUrl: argv.graphqlUrl,
     gitlabUrl: argv.gitlabUrl,
+    bitbucketUrl: argv.bitbucketUrl,
+    username: argv.username,
+    appPassword: argv.appPassword,
   });
   return provider;
 }
